@@ -1,5 +1,5 @@
 pyTelegramBotAPI==4.22.1
-pip==24.2
+pip==24.3.1
 click==8.1.7
 certifi==2024.6.2
 requests==2.32.3
@@ -9,3 +9,4 @@ idna==3.7
 setuptools==72.2.0
 packaging==23.2
 python-dotenv==1.0.1
+python-telegram-bot-pagination==0.0.3

@@ -19,6 +19,3 @@ def api_request(method_endswith,
             return response.json()
     except:
         pass
-
-
-# parameters = {"page": "1", "limit": "10", "query": film_name, "genres.name": genre}
