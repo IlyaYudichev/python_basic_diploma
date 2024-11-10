@@ -7,6 +7,7 @@ from api.api_site_request import api_request
 from utils.pagination_data import get_pagination_data
 from utils.filter_by_genre_and_limit import filtering_by_genre
 from keyboards.inline.movie_pagination import get_movie_paginator
+from utils.result_message import send_result_message
 
 
 @bot.message_handler(commands=["movie_search"])
@@ -51,21 +52,13 @@ def get_number_of_results_and_send_result(message: Message) -> None:
             response_movie_search: dict = api_request(url_movie_search_endswith, movie_search_params)
             response_filtered_by_genre: dict = filtering_by_genre(response_movie_search, data["genre"],
                                                                   data["number_of_results"])
-            if response_filtered_by_genre["docs"]:
-                data["pagination_info"]: tuple = get_pagination_data(response_filtered_by_genre)
-                movie_posters, movie_pages = data["pagination_info"]
-                print(message)
-                bot.send_photo(
-                    message.chat.id,
-                    movie_posters[0],
-                    caption=movie_pages[0],
-                    reply_markup=get_movie_paginator(movie_pages).markup,
-                    parse_mode='Markdown'
-                )
-            else:
-                bot.send_message(message.from_user.id,
+        if not response_filtered_by_genre["docs"]:
+            bot.send_message(message.from_user.id,
                                  "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
-        bot.delete_state(message.from_user.id, message.chat.id)
+        else:
+            data["pagination_info"]: tuple = get_pagination_data(response_filtered_by_genre)
+            send_result_message(message.from_user.id, message.chat.id)
+        # bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
@@ -75,16 +68,7 @@ def get_number_of_results_and_send_result(message: Message) -> None:
 def movie_page_callback(callback) -> None:
     page = int(callback.data.split("#")[1])
     bot.delete_message(callback.message.chat.id, callback.message.message_id)
-    with bot.retrieve_data(callback.message.from_user.id, callback.message.chat.id) as data:
-        print(data.keys())
-        movie_posters, movie_pages = data["pagination_info"]
-    bot.send_photo(
-        callback.message.chat.id,
-        movie_posters[page - 1],
-        caption=movie_pages[page - 1],
-        reply_markup=get_movie_paginator(movie_pages).markup,
-        parse_mode='Markdown'
-    )
+    send_result_message(callback.from_user.id, callback.message.chat.id, page)
 
 
 @bot.callback_query_handler(func=lambda callback: callback.data == "hide")
