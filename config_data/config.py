@@ -1,4 +1,6 @@
 import os
+from typing import Tuple
+
 from dotenv import load_dotenv, find_dotenv
 
 if not find_dotenv():
@@ -10,7 +12,7 @@ else:
 BOT_TOKEN: str = os.getenv("BOT_TOKEN")
 KINOPOISK_API_KEY: str = os.getenv("KINOPOISK_API_KEY")
 
-DEFAULT_COMMANDS: tuple = (
+DEFAULT_COMMANDS: Tuple[Tuple[str, str], ...] = (
     ("start", "Запустить бота"),
     ("help", "Вывести справку"),
     ("hello_world", "Тестовая команда"),

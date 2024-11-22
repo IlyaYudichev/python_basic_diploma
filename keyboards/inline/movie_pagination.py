@@ -1,7 +1,19 @@
+from typing import List
+
 from telegram_bot_pagination import InlineKeyboardPaginator, InlineKeyboardButton
 
 
-def get_movie_paginator(movie_pages, page=1) -> InlineKeyboardPaginator:
+def get_movie_paginator(movie_pages: List[str], page: int = 1) -> InlineKeyboardPaginator:
+    """
+    Get movie paginator object.
+
+    :param movie_pages: list with data for movie pages
+    :type movie_pages: List[str]
+    :param page: current page number
+    :type page: int
+    :return: paginator object of movie pages
+    :rtype: InlineKeyboardPaginator
+    """
     paginator = InlineKeyboardPaginator(
         len(movie_pages),
         current_page=page,

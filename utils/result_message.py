@@ -1,11 +1,23 @@
+from telegram_bot_pagination import InlineKeyboardPaginator
+
 from loader import bot
 from keyboards.inline.movie_pagination import get_movie_paginator
 
 
-def send_result_message(user_id, chat_id, page=1):
+def send_result_message(user_id: int, chat_id: int, page: int=1):
+    """
+    Send message with result of movie search.
+
+    :param user_id: user id
+    :type user_id: int
+    :param chat_id: chat id
+    :type chat_id: int
+    :param page: current page number
+    :type page: int
+    """
     with bot.retrieve_data(user_id, chat_id) as data:
         movie_posters, movie_pages = data["pagination_info"]
-    paginator = get_movie_paginator(movie_pages, page)
+    paginator: InlineKeyboardPaginator = get_movie_paginator(movie_pages, page)
     bot.send_photo(
         user_id,
         movie_posters[page - 1],
