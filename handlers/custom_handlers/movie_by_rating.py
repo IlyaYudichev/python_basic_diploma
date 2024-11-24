@@ -1,41 +1,57 @@
-from typing import List, Dict, Optional, Any, Tuple, Union
+from typing import List, Dict, Optional, Any, Union, Tuple
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
 from loader import bot
-from states.movie_search_states import MovieSearchStates
+from states.movie_by_rating_states import MovieByRatingStates
 from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
 from api.api_site_request import api_request
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
 
 
-@bot.message_handler(commands=["movie_search"])
-def movie_by_name(message: Message) -> None:
+@bot.message_handler(commands=["movie_by_rating"])
+def movie_by_rating_search(message: Message) -> None:
     """
-    Request name of movie from user.
+    Request movie rating from user.
 
     :param message: message from user
     :type message: Message
     """
-    bot.set_state(message.from_user.id, MovieSearchStates.name, message.chat.id)
-    bot.send_message(message.from_user.id, "Введите название фильма или сериала:")
+    bot.set_state(message.from_user.id, MovieByRatingStates.rating, message.chat.id)
+    bot.send_message(message.from_user.id, "Введите рейтинг фильма/сериала:")
 
 
-@bot.message_handler(state=MovieSearchStates.name)
-def get_movie_name(message: Message) -> None:
+@bot.message_handler(state=MovieByRatingStates.rating)
+def get_movie_rating(message: Message) -> None:
     """
-    Save name of movie and request genre of movie from user.
+    Check and save movie rating and request genre of movie from user.
 
     :param message: message from user
     :type message: Message
     """
-    movie_name_processed: str = message.text.strip()
-    bot.set_state(message.from_user.id, MovieSearchStates.genre, message.chat.id)
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data["name"]: str = movie_name_processed
-    bot.send_message(message.from_user.id, "Хорошо. Теперь выберите жанр:", reply_markup=genres_keyboard)
+    user_input: str = message.text.replace(",", ".")
+    try:
+        if "-" in user_input and user_input.count("-") == 1:
+            range_extreme_points: List[str] = user_input.split("-")
+            filtered_range: List[Optional[str]] = list(
+                filter(lambda x: x.isdigit() and 0 <= float(x) <= 10, range_extreme_points))
+            if len(filtered_range) != 2:
+                raise ValueError
+            if filtered_range[0] > filtered_range[1]:
+                filtered_range.reverse()
+                user_input: str = "-".join(filtered_range)
+        elif not 0 <= float(user_input) <= 10:
+            raise ValueError
+        bot.set_state(message.from_user.id, MovieByRatingStates.genre, message.chat.id)
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            data["movie_rating"]: List[str] = [user_input]
+        bot.send_message(message.from_user.id, "Хорошо. Теперь выберите жанр:", reply_markup=genres_keyboard)
+    except ValueError:
+        bot.send_message(message.from_user.id,
+                         'Ошибка. Введите целое или дробное число от 0 до 10 включительно или диапазон чисел.'
+                         '\nНапример "6", "7.2" или "8-10"')
 
 
-@bot.message_handler(state=MovieSearchStates.genre)
+@bot.message_handler(state=MovieByRatingStates.genre)
 def get_movie_genre(message: Message) -> None:
     """
     Save genre of movie and request number of results from user.
@@ -44,7 +60,7 @@ def get_movie_genre(message: Message) -> None:
     :type message: Message
     """
     if message.text.lower() in genres_variants:
-        bot.set_state(message.from_user.id, MovieSearchStates.number_of_results, message.chat.id)
+        bot.set_state(message.from_user.id, MovieByRatingStates.number_of_results, message.chat.id)
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["genre"]: str = message.text
         bot.send_message(message.from_user.id,
@@ -54,7 +70,7 @@ def get_movie_genre(message: Message) -> None:
         bot.send_message(message.from_user.id, "Выберите жанр из предложенных ниже:")
 
 
-@bot.message_handler(state=MovieSearchStates.number_of_results)
+@bot.message_handler(state=MovieByRatingStates.number_of_results)
 def get_number_of_results_and_send_result(message: Message) -> None:
     """
     Save number of results and send message with result of movie search.
@@ -66,22 +82,18 @@ def get_number_of_results_and_send_result(message: Message) -> None:
         number_of_results: int = abs(int(message.text))
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["number_of_results"]: int = number_of_results
-            url_movie_search_endswith: str = "v1.4/movie/search"
-            movie_search_params: Dict[str, Union[str, int, list]] = {"query": data["name"],
-                                                                     "page": 1
+            url_movie_search_endswith: str = "v1.4/movie"
+            fields_required: List[str] = ["name", "description", "rating", "year", "genres", "ageRating", "poster"]
+            movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
+                                                                     "limit": data["number_of_results"],
+                                                                     "rating.kp": data["movie_rating"],
+                                                                     "genres.name": data["genre"],
+                                                                     "selectFields": fields_required
                                                                      }
-
             response_movie_search: Dict[str, Optional[Any]] = api_request(url_movie_search_endswith,
                                                                           movie_search_params)
             if response_movie_search["docs"]:
-                response_filtered_by_genre: List[Dict[str, Optional[Any]]] = [i_movie for i_movie in
-                                                                              response_movie_search["docs"] for
-                                                                              i_genre_name in i_movie["genres"] if
-                                                                              i_genre_name["name"] == data["genre"]]
-                if response_filtered_by_genre:
-                    response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[
-                                                                       :data["number_of_results"]]
-                    data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
+                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
         if response_movie_search["docs"]:
             send_result_message(message.from_user.id, message.chat.id)
         else:
