@@ -15,13 +15,19 @@ def get_pagination_data(movies_data: Dict[str, Optional[Any]]) -> Tuple[List[str
         for i_key in i_movie.keys():
             if i_movie[i_key] is None:
                 i_movie[i_key]: str = "-"
+        if "budget" in i_movie:
+            budget: str = "\nБюджет: {budget_value} {budget_currency}".format(budget_value=i_movie["budget"]["value"],
+                                                                              budget_currency=i_movie["budget"]["currency"])
+        else:
+            budget: str = ""
         genres_string: str = ", ".join([i_genre["name"] for i_genre in i_movie["genres"]])
-        string_template: str = "\"{name}\"\nРейтинг: {rating}\nГод: {year}\nЖанр: {genres}\nВозраст: {ageRating}+\n{description}".format(
+        string_template: str = "\"{name}\"\nРейтинг: {rating}\nГод: {year}\nЖанр: {genres}\nВозраст: {ageRating}+{budget}\n{description}".format(
             name=i_movie["name"],
             rating=round(i_movie["rating"]["kp"], 1),
             year=i_movie["year"],
             genres=genres_string,
             ageRating=i_movie["ageRating"],
+            budget=budget,
             description=i_movie["description"]
         )
         result_string: str = string_template.replace("-+", "-")

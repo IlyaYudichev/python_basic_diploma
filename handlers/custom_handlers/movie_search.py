@@ -17,7 +17,7 @@ def movie_by_name(message: Message) -> None:
     :type message: Message
     """
     bot.set_state(message.from_user.id, MovieSearchStates.name, message.chat.id)
-    bot.send_message(message.from_user.id, "Введите название фильма или сериала:")
+    bot.send_message(message.from_user.id, "Введите название фильма или сериала:", reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(state=MovieSearchStates.name)
@@ -80,13 +80,14 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                               i_genre_name["name"] == data["genre"]]
                 if response_filtered_by_genre:
                     response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[
-                                                                       :data["number_of_results"]]
-                    data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
+                                                                   :data["number_of_results"]]
+                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
         if response_movie_search["docs"]:
             send_result_message(message.from_user.id, message.chat.id)
         else:
             bot.send_message(message.from_user.id,
                              "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
+            bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
@@ -114,3 +115,4 @@ def delete_markup(callback: CallbackQuery) -> None:
     :type callback: CallbackQuery
     """
     bot.delete_message(callback.message.chat.id, callback.message.message_id)
+    bot.delete_state(callback.from_user.id, callback.message.chat.id)

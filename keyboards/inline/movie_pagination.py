@@ -20,6 +20,6 @@ def get_movie_paginator(movie_pages: List[str], page: int = 1) -> InlineKeyboard
         data_pattern="movie#{page}"
     )
 
-    button_hide = InlineKeyboardButton("Скрыть", callback_data="hide")
+    button_hide = InlineKeyboardButton("Завершить поиск", callback_data="hide")
     paginator.add_after(button_hide)
     return paginator

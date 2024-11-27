@@ -17,7 +17,7 @@ def movie_by_rating_search(message: Message) -> None:
     :type message: Message
     """
     bot.set_state(message.from_user.id, MovieByRatingStates.rating, message.chat.id)
-    bot.send_message(message.from_user.id, "Введите рейтинг фильма/сериала:")
+    bot.send_message(message.from_user.id, "Введите рейтинг фильма/сериала:", reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(state=MovieByRatingStates.rating)
@@ -88,7 +88,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                      "limit": data["number_of_results"],
                                                                      "rating.kp": data["movie_rating"],
                                                                      "genres.name": data["genre"],
-                                                                     "selectFields": fields_required
+                                                                     "selectFields": fields_required,
+                                                                     "notNullFields": ["name"]
                                                                      }
             response_movie_search: Dict[str, Optional[Any]] = api_request(url_movie_search_endswith,
                                                                           movie_search_params)
@@ -99,6 +100,7 @@ def get_number_of_results_and_send_result(message: Message) -> None:
         else:
             bot.send_message(message.from_user.id,
                              "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
+            bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
@@ -126,3 +128,4 @@ def delete_markup(callback: CallbackQuery) -> None:
     :type callback: CallbackQuery
     """
     bot.delete_message(callback.message.chat.id, callback.message.message_id)
+    bot.delete_state(callback.from_user.id, callback.message.chat.id)
