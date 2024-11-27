@@ -33,7 +33,7 @@ def get_movie_rating(message: Message) -> None:
         if "-" in user_input and user_input.count("-") == 1:
             range_extreme_points: List[str] = user_input.split("-")
             filtered_range: List[Optional[str]] = list(
-                filter(lambda x: x.isdigit() and 0 <= float(x) <= 10, range_extreme_points))
+                filter(lambda x: 0 <= float(x) <= 10, range_extreme_points))
             if len(filtered_range) != 2:
                 raise ValueError
             if filtered_range[0] > filtered_range[1]:
