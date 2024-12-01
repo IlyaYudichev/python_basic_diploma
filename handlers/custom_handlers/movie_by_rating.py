@@ -1,9 +1,10 @@
+from random import choices
 from typing import List, Dict, Optional, Any, Union, Tuple
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
 from loader import bot
 from states.movie_by_rating_states import MovieByRatingStates
 from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
-from api.api_site_request import api_request
+from utils.full_response import get_full_response
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
 
@@ -27,6 +28,7 @@ def get_movie_rating(message: Message) -> None:
 
     :param message: message from user
     :type message: Message
+    :raise ValueError: raise exception if user input is not a number from 0 to 10 or contains 3 numbers
     """
     user_input: str = message.text.replace(",", ".")
     try:
@@ -81,21 +83,26 @@ def get_number_of_results_and_send_result(message: Message) -> None:
     try:
         number_of_results: int = abs(int(message.text))
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            bot.send_message(message.chat.id, "Выполняется поиск, ожидайте...")
             data["number_of_results"]: int = number_of_results
             url_movie_search_endswith: str = "v1.4/movie"
             fields_required: List[str] = ["name", "description", "rating", "year", "genres", "ageRating", "poster"]
             movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
-                                                                     "limit": data["number_of_results"],
+                                                                     "limit": 250,
                                                                      "rating.kp": data["movie_rating"],
                                                                      "genres.name": data["genre"],
                                                                      "selectFields": fields_required,
                                                                      "notNullFields": ["name"]
                                                                      }
-            response_movie_search: Dict[str, Optional[Any]] = api_request(url_movie_search_endswith,
-                                                                          movie_search_params)
-            if response_movie_search["docs"]:
-                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
-        if response_movie_search["docs"]:
+            response_movie_search: Dict[str, Optional[Any]] = get_full_response(url_movie_search_endswith,
+                                                                                movie_search_params)
+            if len(response_movie_search["docs"]) > data["number_of_results"]:
+                result_response: List[Dict[str, Optional[Any]]] = choices(response_movie_search["docs"],
+                                                                          k=data["number_of_results"])
+            else:
+                result_response: List[Dict[str, Optional[Any]]] = response_movie_search["docs"]
+            data["pagination_info"]: Tuple[list, list] = get_pagination_data(result_response)
+        if result_response:
             send_result_message(message.from_user.id, message.chat.id)
         else:
             bot.send_message(message.from_user.id,

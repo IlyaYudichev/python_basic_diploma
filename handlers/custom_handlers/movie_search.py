@@ -3,7 +3,7 @@ from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
 from loader import bot
 from states.movie_search_states import MovieSearchStates
 from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
-from api.api_site_request import api_request
+from utils.full_response import get_full_response
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
 
@@ -65,13 +65,15 @@ def get_number_of_results_and_send_result(message: Message) -> None:
     try:
         number_of_results: int = abs(int(message.text))
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            bot.send_message(message.chat.id, "Выполняется поиск, ожидайте...")
             data["number_of_results"]: int = number_of_results
             url_movie_search_endswith: str = "v1.4/movie/search"
             movie_search_params: Dict[str, Union[str, int, list]] = {"query": data["name"],
-                                                                     "page": 1
+                                                                     "page": 1,
+                                                                     "limit": 250
                                                                      }
 
-            response_movie_search: Dict[str, Optional[Any]] = api_request(url_movie_search_endswith,
+            response_movie_search: Dict[str, Optional[Any]] = get_full_response(url_movie_search_endswith,
                                                                           movie_search_params)
             if response_movie_search["docs"]:
                 response_filtered_by_genre: List[Dict[str, Optional[Any]]] = [i_movie for i_movie in
@@ -79,9 +81,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                               i_genre_name in i_movie["genres"] if
                                                                               i_genre_name["name"] == data["genre"]]
                 if response_filtered_by_genre:
-                    response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[
-                                                                   :data["number_of_results"]]
-                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
+                    response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[:data["number_of_results"]]
+                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search["docs"])
         if response_movie_search["docs"]:
             send_result_message(message.from_user.id, message.chat.id)
         else:

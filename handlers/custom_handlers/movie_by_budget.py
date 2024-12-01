@@ -1,10 +1,11 @@
 from typing import List, Dict, Optional, Any, Union, Tuple
+from random import choices
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
 from loader import bot
 from states.movie_by_budget_states import MovieByBudgetStates
 from keyboards.reply.budget_currency_markup import get_budget_currency_markup
 from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
-from api.api_site_request import api_request
+from utils.full_response import get_full_response
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
 
@@ -41,7 +42,7 @@ def get_budget_currency(message: Message) -> None:
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["budget_currency"]: str = currency_user
             bot.send_message(message.chat.id,
-                             f"Хорошо. Теперь введите {data['kind_of_budget']} возможный бюджет для поиска",
+                             f"Хорошо. Теперь введите {data['kind_of_budget']} возможный бюджет для поиска:",
                              reply_markup=ReplyKeyboardRemove())
             bot.set_state(message.from_user.id, MovieByBudgetStates.budget_value, message.chat.id)
     else:
@@ -95,6 +96,7 @@ def get_number_of_results_and_send_result(message: Message) -> None:
     try:
         number_of_results: int = abs(int(message.text))
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            bot.send_message(message.chat.id, "Выполняется поиск, ожидайте...")
             if data["kind_of_budget"] == "максимально":
                 budget_range: List[str] = [f"0-{data['budget_value']}"]
             else:
@@ -104,21 +106,23 @@ def get_number_of_results_and_send_result(message: Message) -> None:
             fields_required: List[str] = ["name", "description", "rating", "year", "genres", "ageRating", "poster",
                                           "budget"]
             movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
-                                                                     "limit": data["number_of_results"],
+                                                                     "limit": 250,
                                                                      "budget.value": budget_range,
                                                                      "genres.name": data["genre"],
                                                                      "selectFields": fields_required,
                                                                      "notNullFields": ["name"]
                                                                      }
-            response_movie_search: Dict[str, Optional[Any]] = api_request(url_movie_search_endswith,
+            response_movie_search: Dict[str, Optional[Any]] = get_full_response(url_movie_search_endswith,
                                                                           movie_search_params)
             if response_movie_search["docs"]:
                 response_filtered_by_currency: List[Dict[str, Optional[Any]]] = list(
                     filter(lambda x: x["budget"]["currency"] == data["budget_currency"], response_movie_search["docs"]))
-                response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_currency
-                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search)
-
-        if response_movie_search["docs"]:
+                if len(response_filtered_by_currency) > data["number_of_results"]:
+                    result_response: List[Dict[str, Optional[Any]]] = choices(response_filtered_by_currency, k=data["number_of_results"])
+                else:
+                    result_response: List[Dict[str, Optional[Any]]] = response_filtered_by_currency
+                data["pagination_info"]: Tuple[list, list] = get_pagination_data(result_response)
+        if result_response:
             send_result_message(message.from_user.id, message.chat.id)
         else:
             bot.send_message(message.from_user.id,
