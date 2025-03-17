@@ -5,6 +5,7 @@ db = pw.SqliteDatabase("search_history.db")
 
 
 class BaseModel(pw.Model):
+    model_id = pw.AutoField()
     created_ad = pw.DateField(default=date.today())
 
     class Meta:
@@ -12,10 +13,13 @@ class BaseModel(pw.Model):
 
 
 class History(BaseModel):
-    movie_name = pw.CharField()
-    movie_description = pw.TextField()
-    movie_rating = pw.CharField()
-    year_of_production = pw.CharField()
-    movie_genre = pw.CharField()
-    age_rating = pw.CharField()
-    poster = pw.BlobField()
+    user_id = pw.IntegerField()
+    id = pw.IntegerField()
+    name = pw.CharField()
+    description = pw.TextField(null=True)
+    rating = pw.FloatField(null=True)
+    year = pw.IntegerField(null=True)
+    genres = pw.TextField(null=True)
+    ageRating = pw.IntegerField(null=True)
+    poster = pw.TextField(null=True)
+    is_viewed = pw.BooleanField()

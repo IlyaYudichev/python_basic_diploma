@@ -6,6 +6,9 @@ from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
 from utils.full_response import get_full_response
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
+from database.common.models import db, History
+from utils.data_for_db import get_data_for_db
+from database.core import db_write
 
 
 @bot.message_handler(commands=["movie_search"])
@@ -82,8 +85,11 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                               i_genre_name["name"] == data["genre"]]
                 if response_filtered_by_genre:
                     response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[:data["number_of_results"]]
-                data["pagination_info"]: Tuple[list, list] = get_pagination_data(response_movie_search["docs"])
+                    data["pagination_info"]: Tuple[List[str], List[str]] = get_pagination_data(response_movie_search["docs"])
+                    data["history_message_flag"]: bool = False
         if response_movie_search["docs"]:
+            info_for_db = get_data_for_db(message.from_user.id, response_movie_search["docs"])
+            db_write(db, History, info_for_db)
             send_result_message(message.from_user.id, message.chat.id)
         else:
             bot.send_message(message.from_user.id,

@@ -7,6 +7,9 @@ from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
 from utils.full_response import get_full_response
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
+from database.common.models import db, History
+from utils.data_for_db import get_data_for_db
+from database.core import db_write
 
 
 @bot.message_handler(commands=["movie_by_rating"])
@@ -86,7 +89,7 @@ def get_number_of_results_and_send_result(message: Message) -> None:
             bot.send_message(message.chat.id, "Выполняется поиск, ожидайте...")
             data["number_of_results"]: int = number_of_results
             url_movie_search_endswith: str = "v1.4/movie"
-            fields_required: List[str] = ["name", "description", "rating", "year", "genres", "ageRating", "poster"]
+            fields_required: List[str] = ["id", "name", "description", "rating", "year", "genres", "ageRating", "poster"]
             movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
                                                                      "limit": 250,
                                                                      "rating.kp": data["movie_rating"],
@@ -101,8 +104,11 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                           k=data["number_of_results"])
             else:
                 result_response: List[Dict[str, Optional[Any]]] = response_movie_search["docs"]
-            data["pagination_info"]: Tuple[list, list] = get_pagination_data(result_response)
+            data["pagination_info"]: Tuple[List[str], List[str]] = get_pagination_data(result_response)
+            data["history_message_flag"]: bool = False
         if result_response:
+            info_for_db: List[Dict[str, Optional[Any]]] = get_data_for_db(message.from_user.id, result_response)
+            db_write(db, History, info_for_db)
             send_result_message(message.from_user.id, message.chat.id)
         else:
             bot.send_message(message.from_user.id,
