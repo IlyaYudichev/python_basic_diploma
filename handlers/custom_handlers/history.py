@@ -1,7 +1,7 @@
 import operator
 from typing import List, Tuple
 
-from telebot.types import Message, CallbackQuery
+from telebot.types import Message, CallbackQuery, ReplyKeyboardRemove
 from datetime import datetime
 
 from database.common.models import History, db
@@ -25,7 +25,8 @@ def request_for_date_of_history(message: Message) -> None:
     """
     bot.set_state(message.from_user.id, HistoryStates.search_history_date, message.chat.id)
     bot.send_message(message.chat.id,
-                     "За какую дату показать результаты поиска?\nВведите дату в формате ДД.ММ.ГГГГ:")
+                     "За какую дату показать результаты поиска?\nВведите дату в формате ДД.ММ.ГГГГ:",
+                     reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(state=HistoryStates.search_history_date)
