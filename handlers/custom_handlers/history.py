@@ -1,18 +1,21 @@
 import operator
 from typing import List, Tuple
-
+from logging import getLogger, WARNING
 from telebot.types import Message, CallbackQuery, ReplyKeyboardRemove
+from config_data.logger_config import configure_logger
 from datetime import datetime
-
 from database.common.models import History, db
 from database.core import db_read, db_update
 from loader import bot
-from states.history_sates import HistoryStates
+from states.history_states import HistoryStates
 from utils.pagination_data import get_pagination_data
 from utils.result_message import send_result_message
 
 DATE_FORMAT: str = "%d.%m.%Y"
 HISTORY_REQUEST: bool = True
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
 @bot.message_handler(commands=["history"])
@@ -43,9 +46,11 @@ def get_date_of_history_and_send_result(message: Message) -> None:
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["date_of_history"]: datetime = date_of_history
     except ValueError:
+        logger.exception("User with ID - %s entered incorrect 'date_of_history': %s", message.from_user.id,
+                         message.text)
         bot.send_message(message.chat.id, "Неверный формат даты.\nВведите дату в формате ДД.ММ.ГГГГ:")
         return
-    date_required: bool = operator.eq(History.created_ad, date_of_history)
+    date_required: bool = operator.eq(History.created_at, date_of_history)
     user_id_required: bool = operator.eq(History.user_id, message.from_user.id)
     condition_required: bool = operator.and_(date_required, user_id_required)
     db_response = list(db_read(db, History, condition_required))
@@ -83,7 +88,7 @@ def update_movie_status_and_send_result(callback: CallbackQuery) -> None:
     db_update(db, History, fields_to_update, condition_for_update)
     with bot.retrieve_data(callback.from_user.id, callback.message.chat.id) as data:
         date_of_history: datetime = data["date_of_history"]
-    date_required: bool = operator.eq(History.created_ad, date_of_history)
+    date_required: bool = operator.eq(History.created_at, date_of_history)
     condition_for_read: bool = operator.and_(date_required, user_id_required)
     db_response = list(db_read(db, History, condition_for_read))
     with bot.retrieve_data(callback.from_user.id, callback.message.chat.id) as data:

@@ -14,7 +14,7 @@ def _store_data(database: db, model: T, movie_data: List[Dict]) -> None:
     :param database: database
     :type database: SqliteDatabase
     :param model: instance model for operation of writing to single row of table
-    :type model: ModelBase
+    :type model: TypeVar
     :param movie_data: data of movies for writing to database
     :type movie_data: List[Dict]
     """
@@ -29,7 +29,7 @@ def _retrieve_data(database: db, model: T, expression: Optional[bool]) -> ModelS
     :param database: database
     :type database: SqliteDatabase
     :param model: instance model for operation of reading single row of table
-    :type model: ModelBase
+    :type model: TypeVar
     :param expression: required filter for database query
     :type expression: bool
     :return: response from database with dictionaries of key-value pairs
@@ -47,7 +47,7 @@ def _update_data(database: db, model: T, fields_to_update: Dict[str, Any], expre
     :param database: database
     :type database: SqliteDatabase
     :param model: instance model for operation of updating data in single row of table
-    :type model: ModelBase
+    :type model: TypeVar
     :param fields_to_update: dictionary with data for updating database
     :type fields_to_update:  Dict[str, Any]
     :param expression: required filter for database query

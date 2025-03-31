@@ -1,9 +1,12 @@
 from typing import Dict, Union, Optional, Any, List
-
+from logging import getLogger, WARNING
 import requests
 from requests import Response
-
+from config_data.logger_config import configure_logger
 from config_data.config import KINOPOISK_API_KEY
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
 def api_request(method_endswith: str,
@@ -32,5 +35,6 @@ def api_request(method_endswith: str,
         )
         if response.status_code == requests.codes.ok:
             return response.json()
-    except:
+    except Exception:
+        logger.warning("Exception while receiving a response to a request to API", exc_info=True)
         pass

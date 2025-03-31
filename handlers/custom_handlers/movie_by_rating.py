@@ -1,5 +1,7 @@
+from logging import getLogger, WARNING
 from random import choices
 from typing import List, Dict, Optional, Any, Union, Tuple
+from config_data.logger_config import configure_logger
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
 from loader import bot
 from states.movie_by_rating_states import MovieByRatingStates
@@ -10,6 +12,9 @@ from utils.result_message import send_result_message
 from database.common.models import db, History
 from utils.data_for_db import get_data_for_db
 from database.core import db_write
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
 @bot.message_handler(commands=["movie_by_rating"])
@@ -51,6 +56,7 @@ def get_movie_rating(message: Message) -> None:
             data["movie_rating"]: List[str] = [user_input]
         bot.send_message(message.from_user.id, "Хорошо. Теперь выберите жанр:", reply_markup=genres_keyboard)
     except ValueError:
+        logger.exception("User with ID - %s entered incorrect 'movie_rating': %s", message.from_user.id, message.text)
         bot.send_message(message.from_user.id,
                          'Ошибка. Введите целое или дробное число от 0 до 10 включительно или диапазон чисел.'
                          '\nНапример "6", "7.2" или "8-10"')
@@ -72,6 +78,8 @@ def get_movie_genre(message: Message) -> None:
                          "Отлично! Сколько результатов вывести на экран?",
                          reply_markup=ReplyKeyboardRemove())
     else:
+        logger.warning("User with ID - %s entered incorrect 'genre': %s", message.from_user.id,
+                       message.text)
         bot.send_message(message.from_user.id, "Выберите жанр из предложенных ниже:")
 
 
@@ -89,7 +97,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
             bot.send_message(message.chat.id, "Выполняется поиск, ожидайте...")
             data["number_of_results"]: int = number_of_results
             url_movie_search_endswith: str = "v1.4/movie"
-            fields_required: List[str] = ["id", "name", "description", "rating", "year", "genres", "ageRating", "poster"]
+            fields_required: List[str] = ["id", "name", "description", "rating", "year", "genres", "ageRating",
+                                          "poster"]
             movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
                                                                      "limit": 250,
                                                                      "rating.kp": data["movie_rating"],
@@ -115,6 +124,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                              "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
             bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
+        logger.exception("User with ID - %s entered incorrect 'number_of_results': %s", message.from_user.id,
+                         message.text)
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
 

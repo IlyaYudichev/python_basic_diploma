@@ -1,6 +1,8 @@
+from logging import getLogger, WARNING
 from typing import List, Dict, Optional, Any, Union, Tuple
 from random import choices
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
+from config_data.logger_config import configure_logger
 from loader import bot
 from states.movie_by_budget_states import MovieByBudgetStates
 from keyboards.reply.budget_currency_markup import get_budget_currency_markup
@@ -11,6 +13,9 @@ from utils.result_message import send_result_message
 from database.common.models import db, History
 from utils.data_for_db import get_data_for_db
 from database.core import db_write
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
 @bot.message_handler(commands=["low_budget_movie", "high_budget_movie"])
@@ -49,6 +54,8 @@ def get_budget_currency(message: Message) -> None:
                              reply_markup=ReplyKeyboardRemove())
             bot.set_state(message.from_user.id, MovieByBudgetStates.budget_value, message.chat.id)
     else:
+        logger.warning("User with ID - %s entered incorrect 'budget_currency': %s", message.from_user.id,
+                       message.text)
         bot.send_message(message.chat.id, "Ошибка. Выберите валюту бюджета из предложенных ниже:")
 
 
@@ -66,6 +73,8 @@ def get_budget_value(message: Message) -> None:
         bot.set_state(message.from_user.id, MovieByBudgetStates.genre, message.chat.id)
         bot.send_message(message.chat.id, "Замечательно. Теперь давайте выберем жанр:", reply_markup=genres_keyboard)
     else:
+        logger.warning("User with ID - %s entered incorrect 'budget_value': %s", message.from_user.id,
+                       message.text)
         bot.send_message(message.chat.id, 'Ошибка. Введите целое положительное число, например "100000" или "2000000".')
 
 
@@ -85,6 +94,8 @@ def get_movie_genre(message: Message) -> None:
                          "Отлично! Сколько результатов вывести на экран?",
                          reply_markup=ReplyKeyboardRemove())
     else:
+        logger.warning("User with ID - %s entered incorrect 'genre': %s", message.from_user.id,
+                       message.text)
         bot.send_message(message.from_user.id, "Выберите жанр из предложенных ниже:")
 
 
@@ -106,7 +117,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                 budget_range: List[str] = [f"{data['budget_value']}-1000000000"]
             data["number_of_results"]: int = number_of_results
             url_movie_search_endswith: str = "v1.4/movie"
-            fields_required: List[str] = ["id", "name", "description", "rating", "year", "genres", "ageRating", "poster",
+            fields_required: List[str] = ["id", "name", "description", "rating", "year", "genres", "ageRating",
+                                          "poster",
                                           "budget"]
             movie_search_params: Dict[str, Union[str, int, list]] = {"page": 1,
                                                                      "limit": 250,
@@ -116,12 +128,13 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                      "notNullFields": ["name"]
                                                                      }
             response_movie_search: Dict[str, Optional[Any]] = get_full_response(url_movie_search_endswith,
-                                                                          movie_search_params)
+                                                                                movie_search_params)
             if response_movie_search["docs"]:
                 response_filtered_by_currency: List[Dict[str, Optional[Any]]] = list(
                     filter(lambda x: x["budget"]["currency"] == data["budget_currency"], response_movie_search["docs"]))
                 if len(response_filtered_by_currency) > data["number_of_results"]:
-                    result_response: List[Dict[str, Optional[Any]]] = choices(response_filtered_by_currency, k=data["number_of_results"])
+                    result_response: List[Dict[str, Optional[Any]]] = choices(response_filtered_by_currency,
+                                                                              k=data["number_of_results"])
                 else:
                     result_response: List[Dict[str, Optional[Any]]] = response_filtered_by_currency
                 data["pagination_info"]: Tuple[List[str], List[str]] = get_pagination_data(result_response)
@@ -135,6 +148,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                              "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
             bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
+        logger.exception("User with ID - %s entered incorrect 'number_of_results': %s", message.from_user.id,
+                         message.text)
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
 

@@ -1,5 +1,7 @@
+from logging import getLogger, WARNING
 from typing import List, Dict, Optional, Any, Tuple, Union
 from telebot.types import Message, ReplyKeyboardRemove, CallbackQuery
+from config_data.logger_config import configure_logger
 from loader import bot
 from states.movie_search_states import MovieSearchStates
 from keyboards.reply.genres_reply_markup import genres_keyboard, genres_variants
@@ -9,6 +11,9 @@ from utils.result_message import send_result_message
 from database.common.models import db, History
 from utils.data_for_db import get_data_for_db
 from database.core import db_write
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
 @bot.message_handler(commands=["movie_search"])
@@ -54,6 +59,8 @@ def get_movie_genre(message: Message) -> None:
                          "Отлично! Сколько результатов вывести на экран?",
                          reply_markup=ReplyKeyboardRemove())
     else:
+        logger.warning("User with ID - %s entered incorrect 'genre': %s", message.from_user.id,
+                       message.text)
         bot.send_message(message.from_user.id, "Выберите жанр из предложенных ниже:")
 
 
@@ -77,15 +84,17 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                                                                      }
 
             response_movie_search: Dict[str, Optional[Any]] = get_full_response(url_movie_search_endswith,
-                                                                          movie_search_params)
+                                                                                movie_search_params)
             if response_movie_search["docs"]:
                 response_filtered_by_genre: List[Dict[str, Optional[Any]]] = [i_movie for i_movie in
                                                                               response_movie_search["docs"] for
                                                                               i_genre_name in i_movie["genres"] if
                                                                               i_genre_name["name"] == data["genre"]]
                 if response_filtered_by_genre:
-                    response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[:data["number_of_results"]]
-                    data["pagination_info"]: Tuple[List[str], List[str]] = get_pagination_data(response_movie_search["docs"])
+                    response_movie_search["docs"]: List[Dict[str, Optional[Any]]] = response_filtered_by_genre[
+                                                                                    :data["number_of_results"]]
+                    data["pagination_info"]: Tuple[List[str], List[str]] = get_pagination_data(
+                        response_movie_search["docs"])
                     data["history_message_flag"]: bool = False
         if response_movie_search["docs"]:
             info_for_db = get_data_for_db(message.from_user.id, response_movie_search["docs"])
@@ -96,6 +105,8 @@ def get_number_of_results_and_send_result(message: Message) -> None:
                              "К сожалению, по вашему запросу ничего не найдено. Попробуйте снова.")
             bot.delete_state(message.from_user.id, message.chat.id)
     except ValueError:
+        logger.exception("User with ID - %s entered incorrect 'number_of_results': %s", message.from_user.id,
+                         message.text)
         bot.reply_to(message,
                      "Ошибка - введенное значение должно быть целым числом.\nСколько результатов вывести на экран?")
 

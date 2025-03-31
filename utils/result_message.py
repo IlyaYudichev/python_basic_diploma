@@ -1,10 +1,15 @@
+from logging import getLogger, WARNING
 from telebot.apihelper import ApiTelegramException
 from telegram_bot_pagination import InlineKeyboardPaginator
 from loader import bot
 from keyboards.inline.movie_pagination import get_movie_paginator
+from config_data.logger_config import configure_logger
+
+logger = getLogger(__name__)
+configure_logger(level=WARNING)
 
 
-def send_result_message(user_id: int, chat_id: int, page: int=1) -> None:
+def send_result_message(user_id: int, chat_id: int, page: int = 1) -> None:
     """
     Send message with result of movie search.
 
@@ -31,5 +36,6 @@ def send_result_message(user_id: int, chat_id: int, page: int=1) -> None:
             parse_mode='Markdown'
         )
     except ApiTelegramException:
+        logger.exception("Error while sending result message to user")
         bot.delete_state(user_id, chat_id)
         bot.send_message(chat_id, "Ой, похоже на сервере произошла ошибка.\nПожалуйста, повторите поиск.")
