@@ -58,7 +58,7 @@ To get a local copy up and running follow these simple example steps.
    ```
 8. Change git remote url to avoid accidental pushes to base project
    ```
-   git remote set-url origin https://github.com/github_username/repo_name_new.git
+   git remote set-url origin https://github.com/github_username_new/repo_name_new.git
    ```
 9. To launch the bot, run the following command
    ```
