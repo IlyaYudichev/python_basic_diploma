@@ -26,13 +26,13 @@ To get a local copy up and running follow these simple example steps.
 ### Installation
 
 1. Get a free API key from [kinopoisk.dev](https://kinopoisk.dev)
-2. Get a free bot token from @BotFather at Telegram.
+2. Get a free bot token from @BotFather at Telegram
 3. Clone the repo
 
     ```
     git clone https://github.com/github_username/repo_name.git
     ```
-4. Create a virtual environment in the root folder of your local repo and activate it (Windows example)
+4. Create a virtual environment in the root folder of your local repo
 
    ```
    python3 -m venv venv
