@@ -132,3 +132,6 @@ dmypy.json
 
 # augmented extension log files
 *.log*
+
+# database file
+search_history.db

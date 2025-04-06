@@ -1,6 +1,6 @@
 from typing import List, TypeVar, Dict, Any, Optional
 
-from peewee import ModelSelect, SqliteDatabase, ModelBase
+from peewee import ModelSelect, SqliteDatabase
 
 from database.common.models import db
 
